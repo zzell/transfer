@@ -10,6 +10,7 @@ import (
 type (
 	// Config configuration model
 	Config struct {
+		ListenPort        int            `json:"listen_port"`
 		CommissionPercent float64        `json:"commission_percent"` // system commission
 		Database          db.PostgresDSN `json:"db"`
 	}
