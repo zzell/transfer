@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/zzell/transfer/cfg"
 	"github.com/zzell/transfer/db/repo"
 	"github.com/zzell/transfer/model"
 	"github.com/zzell/transfer/web/render"
@@ -14,17 +15,22 @@ import (
 type (
 	Handler struct {
 		walletsRepo repo.WalletsRepo
+		config      *cfg.Config
 	}
 
 	payload struct {
-		From   int     `json:"from"`
-		To     int     `json:"to"`
-		Amount float64 `json:"amount"`
+		From     int     `json:"from"`
+		To       int     `json:"to"`
+		Amount   float64 `json:"amount"`
+		Currency string  `json:"currency"`
 	}
 )
 
-func NewHandler(r repo.WalletsRepo) Handler {
-	return Handler{walletsRepo: r}
+func NewHandler(r repo.WalletsRepo, config *cfg.Config) Handler {
+	return Handler{
+		walletsRepo: r,
+		config:      config,
+	}
 }
 
 func (h Handler) Handle(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +58,7 @@ func (h Handler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.walletsRepo.Transfer(body.From, body.To, body.Amount)
+	err = h.walletsRepo.Transfer(body.From, body.To, body.Amount, subCommission(body.Amount, h.config.CommissionPercent))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			renderErr(w, http.StatusNotFound, "wallet does not exist", err.Error())
@@ -64,6 +70,12 @@ func (h Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	render.Status(w, http.StatusOK)
+}
+
+// subtracts commission from gross value
+// in real life the difference might be written somewhere
+func subCommission(gross, percentage float64) float64 {
+	return gross - ((percentage / 100) * gross)
 }
 
 func renderErr(w http.ResponseWriter, status int, err, desc string) {

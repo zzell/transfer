@@ -18,7 +18,7 @@ type (
 	WalletsRepo interface {
 		// instead of Transfer we could have "Add" and "Sub" methods but
 		// we need to use single transaction to be sure that everything executed in one batch
-		Transfer(sender, receiver int, score float64) error
+		Transfer(sender, receiver int, gross, net float64) error
 		GetScore(walletID int) (float64, error)
 	}
 
@@ -32,14 +32,17 @@ func NewWalletsRepo(conn *sql.DB) WalletsRepo {
 	return &wallets{conn: conn}
 }
 
-func (w *wallets) Transfer(sender, receiver int, score float64) error {
+// monetized
+func (w *wallets) Transfer(sender, receiver int, gross, net float64) error {
 	tx, err := w.conn.Begin()
 	if err != nil {
 		return err
 	}
 
+	var scanner int = 0
+
 	// scan is used to check whether wallet exists
-	err = tx.QueryRow(subtractScore, score, sender).Scan(0)
+	err = tx.QueryRow(subtractScore, gross, sender).Scan(&scanner)
 	if err != nil {
 		if err2 := tx.Rollback(); err2 != nil {
 			return fmt.Errorf(errRollbackFmt, err2, err)
@@ -47,7 +50,7 @@ func (w *wallets) Transfer(sender, receiver int, score float64) error {
 		return err
 	}
 
-	err = tx.QueryRow(addScore, score, receiver).Scan(0)
+	err = tx.QueryRow(addScore, net, receiver).Scan(&scanner)
 	if err != nil {
 		if err2 := tx.Rollback(); err2 != nil {
 			return fmt.Errorf(errRollbackFmt, err2, err)
