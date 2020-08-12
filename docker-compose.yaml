@@ -28,3 +28,10 @@ services:
       - postgres_storage:/var/lib/postgresql/data
     networks:
       - local
+
+volumes:
+  postgres-storage:
+
+networks:
+  local:
+    driver: bridge

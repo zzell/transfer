@@ -2,7 +2,7 @@
   "db": {
     "user": "postgres",
     "password": "secret",
-    "server": "postgres",
+    "server": "127.0.0.1",
     "port": "5432",
     "database": "transfer"
   }

@@ -3,21 +3,15 @@ package cfg
 import (
 	"encoding/json"
 	"io/ioutil"
+
+	"github.com/zzell/transfer/db"
 )
 
 type (
 	// Config configuration model
 	Config struct {
-		Database DB `json:"db"`
-	}
-
-	// DB configuration model
-	DB struct {
-		User     string `json:"user"`
-		Password string `json:"password"`
-		Server   string `json:"server"`
-		Port     string `json:"port"`
-		Database string `json:"database"`
+		CommissionPercent float64        `json:"commission_percent"` // system commission
+		Database          db.PostgresDSN `json:"db"`
 	}
 )
 

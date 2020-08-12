@@ -1,0 +1,7 @@
+CREATE database transfer;
+
+CREATE TABLE IF NOT EXISTS wallets (
+    PRIMARY KEY (id),
+    id SERIAL,
+    score float(32)
+);
