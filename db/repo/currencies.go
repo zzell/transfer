@@ -11,7 +11,9 @@ const (
 )
 
 type (
+	// CurrenciesRepo storage interface
 	CurrenciesRepo interface {
+		// fetches list of all currencies
 		GetList() ([]model.Currency, error)
 	}
 
@@ -20,6 +22,7 @@ type (
 	}
 )
 
+// NewCurrenciesRepo constructor
 func NewCurrenciesRepo(conn *sql.DB) CurrenciesRepo {
 	return &currencies{
 		conn: conn,
@@ -36,12 +39,16 @@ func (c *currencies) GetList() ([]model.Currency, error) {
 
 	for rows.Next() {
 		currency := model.Currency{}
-		err := rows.Scan(&currency.ID, currency.Symbol, currency.Name)
+		err = rows.Scan(&currency.ID, currency.Symbol, currency.Name)
 		if err != nil {
 			return nil, err
 		}
 
 		currencies = append(currencies, currency)
+	}
+
+	if rows.Err() != nil {
+		return nil, err
 	}
 
 	return currencies, rows.Close()

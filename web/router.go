@@ -11,14 +11,15 @@ import (
 	"github.com/zzell/transfer/web/wallet"
 )
 
-func NewRouter(repo repo.Repository, config *cfg.Config, converter currency.Converter) *mux.Router {
+// NewRouter constructor
+func NewRouter(repository repo.Repository, config *cfg.Config, converter currency.Converter) *mux.Router {
 	r := mux.NewRouter()
 
-	transferHandler := transfer.NewHandler(config, repo, converter)
-	walletHandler := wallet.NewHandler(repo)
+	transferHandler := transfer.NewHandler(config, repository, converter)
+	walletHandler := wallet.NewHandler(repository)
 
 	r.HandleFunc("/transfer", transferHandler.Handle).Methods(http.MethodPost)
-	r.HandleFunc("/wallet/{id}", walletHandler.GetScore).Methods(http.MethodGet)
+	r.HandleFunc("/wallet/{id}", walletHandler.GetWallet).Methods(http.MethodGet)
 
 	return r
 }

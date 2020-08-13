@@ -16,17 +16,19 @@ import (
 )
 
 type (
+	// Handler dependency bridge
 	Handler struct {
 		repo      repo.Repository
 		config    *cfg.Config
 		converter currency.Converter
 	}
 
-	Response struct {
+	response struct {
 		Commission string `json:"commission"`
 	}
 )
 
+// NewHandler constructor
 func NewHandler(config *cfg.Config, r repo.Repository, converter currency.Converter) Handler {
 	return Handler{
 		repo:      r,
@@ -35,6 +37,7 @@ func NewHandler(config *cfg.Config, r repo.Repository, converter currency.Conver
 	}
 }
 
+// Handle handles transfer requests
 func (h Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	var payload = new(model.TransferPayload)
 
@@ -81,7 +84,7 @@ func (h Handler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	render.JSON(w, http.StatusOK, Response{Commission: fmt.Sprintf("%v%s", commission, strings.ToUpper(from.Currency.Symbol))})
+	render.JSON(w, http.StatusOK, response{Commission: fmt.Sprintf("%v%s", commission, strings.ToUpper(from.Currency.Symbol))})
 }
 
 // fetches two wallets concurrently

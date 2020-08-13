@@ -13,17 +13,18 @@ import (
 
 const idPathParam = "id"
 
-type (
-	Handler struct {
-		repo repo.Repository
-	}
-)
+// Handler dependency bridge
+type Handler struct {
+	repo repo.Repository
+}
 
+// NewHandler constructor
 func NewHandler(r repo.Repository) Handler {
 	return Handler{repo: r}
 }
 
-func (h Handler) GetScore(w http.ResponseWriter, r *http.Request) {
+// GetWallet renders wallet info
+func (h Handler) GetWallet(w http.ResponseWriter, r *http.Request) {
 	walletID := mux.Vars(r)[idPathParam]
 
 	walletIDInt, err := strconv.Atoi(walletID)

@@ -9,8 +9,6 @@ import (
 	"github.com/zzell/transfer/model"
 )
 
-// curl -X GET "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eth" -H "accept: application/json"
-
 // Converter converts value of one currency to another
 type Converter interface {
 	Convert(from, to model.Currency, amount float64) (float64, error)
@@ -39,6 +37,7 @@ func NewConverter() *CoingeckoConverter {
 	}
 }
 
+// Convert converts currency using relation from API
 func (c *CoingeckoConverter) Convert(from, to model.Currency, amount float64) (float64, error) {
 	req, err := http.NewRequest(http.MethodGet, coingeckoPriceAPI, nil)
 	if err != nil {
@@ -57,6 +56,8 @@ func (c *CoingeckoConverter) Convert(from, to model.Currency, amount float64) (f
 	if err != nil {
 		return 0, err
 	}
+
+	defer func() { _ = rsp.Body.Close() }()
 
 	if rsp.StatusCode != http.StatusOK {
 		return 0, errors.New(errInvalidRsp)
