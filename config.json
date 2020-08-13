@@ -4,7 +4,7 @@
   "db": {
     "user": "postgres",
     "password": "secret",
-    "server": "127.0.0.1",
+    "server": "postgres",
     "port": "5432",
     "database": "transfer"
   }

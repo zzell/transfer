@@ -1,19 +1,28 @@
 version: "3"
 
 services:
-#  app:
-#    build:
-#      dockerfile: Dockerfile
-#      context: .
-#    command: ./bbcar
-#    volumes:
-#      - ./logs/:/logs
-#    ports:
-#      - 2112:2112
-#    networks:
-#      - local
-#    depends_on:
-#      - postgres
+  app:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    command: ./transfer
+    ports:
+      - 5580:5580
+    networks:
+      - local
+    depends_on:
+      - postgres
+
+  migrate:
+    image: migrate/migrate
+    restart: on-failure:5
+    volumes:
+        - ./psql/migrations:/migrations
+    command: -path /migrations -database postgres://postgres:5432/transfer?user=postgres&password=secret&sslmode=disable up
+    depends_on:
+      - postgres
+    networks:
+      - local
 
   postgres:
     image: "postgres:11.2"
@@ -24,13 +33,14 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: secret
+      POSTGRES_DB: transfer
     volumes:
       - postgres_storage:/var/lib/postgresql/data
     networks:
       - local
 
 volumes:
-  postgres-storage:
+  postgres_storage:
 
 networks:
   local:

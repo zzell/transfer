@@ -1,3 +1,8 @@
+### Run app
+```bash
+docker-compose up -d
+```
+
 ### Requests example
 - POST transfer
 ```bash
