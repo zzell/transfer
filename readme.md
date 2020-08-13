@@ -1,5 +1,5 @@
-
-### Request example
+### Requests example
+- POST transfer
 ```bash
 curl --location --request POST 'localhost:5580/transfer' \
 --header 'Content-Type: application/json' \
@@ -8,6 +8,11 @@ curl --location --request POST 'localhost:5580/transfer' \
     "to": 2,
     "amount": 100
 }'
+```
+
+- GET wallet
+```bash
+curl --location --request GET 'localhost:5580/wallet/5'
 ```
 
 ### Technical gaps:

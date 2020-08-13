@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/zzell/transfer/cfg"
 	"github.com/zzell/transfer/currency"
@@ -18,6 +20,10 @@ type (
 		repo      repo.Repository
 		config    *cfg.Config
 		converter currency.Converter
+	}
+
+	Response struct {
+		Commission string `json:"commission"`
 	}
 )
 
@@ -53,7 +59,8 @@ func (h Handler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	addScore := subCommission(payload.Amount, h.config.CommissionPercent)
+	commission := commission(payload.Amount, h.config.CommissionPercent)
+	addScore := payload.Amount - commission
 
 	if from.Currency.Symbol != to.Currency.Symbol {
 		addScore, err = h.converter.Convert(from.Currency, to.Currency, payload.Amount)
@@ -74,7 +81,7 @@ func (h Handler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	render.Status(w, http.StatusOK)
+	render.JSON(w, http.StatusOK, Response{Commission: fmt.Sprintf("%v%s", commission, strings.ToUpper(from.Currency.Symbol))})
 }
 
 // fetches two wallets concurrently
@@ -106,9 +113,9 @@ func (h Handler) wallets(fromID, toID int) (from, to *model.Wallet, err error) {
 	return
 }
 
-// subtracts commission from gross value
-func subCommission(gross, percentage float64) float64 {
-	return gross - ((percentage / 100) * gross)
+// get commission from gross value
+func commission(gross, percentage float64) float64 {
+	return (percentage / 100) * gross
 }
 
 func renderErr(w http.ResponseWriter, status int, err, desc string) {
