@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/zzell/transfer/cfg"
+	"github.com/zzell/transfer/currency"
 	"github.com/zzell/transfer/db"
 	"github.com/zzell/transfer/db/repo"
 	"github.com/zzell/transfer/web"
@@ -19,13 +20,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	conn, err := db.NewDriver(&config.Database)
+	conn, err := db.Open(&config.Database)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	walletsRepo := repo.NewWalletsRepo(conn)
-	router := web.NewRouter(walletsRepo, &config)
+	repository := repo.NewRepository(conn)
+	converter := currency.NewConverter()
+
+	router := web.NewRouter(repository, &config, converter)
+
 	fmt.Printf("listening on port :%d\n", config.ListenPort)
 	log.Print(http.ListenAndServe(fmt.Sprintf(":%d", config.ListenPort), router))
 }

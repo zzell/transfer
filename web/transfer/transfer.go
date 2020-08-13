@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/zzell/transfer/cfg"
+	"github.com/zzell/transfer/currency"
 	"github.com/zzell/transfer/db/repo"
 	"github.com/zzell/transfer/model"
 	"github.com/zzell/transfer/web/render"
@@ -14,51 +15,55 @@ import (
 
 type (
 	Handler struct {
-		walletsRepo repo.WalletsRepo
-		config      *cfg.Config
-	}
-
-	payload struct {
-		From     int     `json:"from"`
-		To       int     `json:"to"`
-		Amount   float64 `json:"amount"`
-		Currency string  `json:"currency"`
+		repo      repo.Repository
+		config    *cfg.Config
+		converter currency.Converter
 	}
 )
 
-func NewHandler(r repo.WalletsRepo, config *cfg.Config) Handler {
+func NewHandler(config *cfg.Config, r repo.Repository, converter currency.Converter) Handler {
 	return Handler{
-		walletsRepo: r,
-		config:      config,
+		repo:      r,
+		config:    config,
+		converter: converter,
 	}
 }
 
 func (h Handler) Handle(w http.ResponseWriter, r *http.Request) {
-	var body = new(payload)
+	var payload = new(model.TransferPayload)
 
-	err := json.NewDecoder(r.Body).Decode(body)
+	err := json.NewDecoder(r.Body).Decode(payload)
 	if err != nil {
 		renderErr(w, http.StatusBadRequest, "invalid JSON body", err.Error())
 		return
 	}
 
-	senderScore, err := h.walletsRepo.GetScore(body.From)
+	from, to, err := h.wallets(payload.From, payload.To)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			renderErr(w, http.StatusBadRequest, "wallet does not exist", err.Error())
 			return
 		}
-
-		renderErr(w, http.StatusInternalServerError, "failed to connect to external resource", err.Error())
+		renderErr(w, http.StatusInternalServerError, "failed to fetch wallet info", err.Error())
 		return
 	}
 
-	if senderScore < body.Amount {
-		renderErr(w, http.StatusBadRequest, "failed to process", "not enough score in sender's wallet")
+	if from.Score < payload.Amount {
+		renderErr(w, http.StatusBadRequest, "failed to process", "too small score in sender's wallet")
 		return
 	}
 
-	err = h.walletsRepo.Transfer(body.From, body.To, body.Amount, subCommission(body.Amount, h.config.CommissionPercent))
+	addScore := subCommission(payload.Amount, h.config.CommissionPercent)
+
+	if from.Currency.Symbol != to.Currency.Symbol {
+		addScore, err = h.converter.Convert(from.Currency, to.Currency, payload.Amount)
+		if err != nil {
+			renderErr(w, http.StatusInternalServerError, "failed to convert currency", err.Error())
+			return
+		}
+	}
+
+	err = h.repo.WalletsRepo.Transfer(payload.From, payload.To, payload.Amount, addScore)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			renderErr(w, http.StatusNotFound, "wallet does not exist", err.Error())
@@ -72,14 +77,42 @@ func (h Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	render.Status(w, http.StatusOK)
 }
 
+// fetches two wallets concurrently
+func (h Handler) wallets(fromID, toID int) (from, to *model.Wallet, err error) {
+	var (
+		goroutines = 2
+		errch      = make(chan error, goroutines)
+	)
+
+	go func() {
+		var e error
+		from, e = h.repo.WalletsRepo.GetWallet(fromID)
+		errch <- e
+	}()
+
+	go func() {
+		var e error
+		to, e = h.repo.WalletsRepo.GetWallet(toID)
+		errch <- e
+	}()
+
+	for i := 0; i < goroutines; i++ {
+		err = <-errch
+		if err != nil {
+			return
+		}
+	}
+
+	return
+}
+
 // subtracts commission from gross value
-// in real life the difference might be written somewhere
 func subCommission(gross, percentage float64) float64 {
 	return gross - ((percentage / 100) * gross)
 }
 
 func renderErr(w http.ResponseWriter, status int, err, desc string) {
-	render.JSON(w, status, model.Error{
+	render.JSON(w, status, model.ErrRsp{
 		Error:       err,
 		Description: desc,
 	})

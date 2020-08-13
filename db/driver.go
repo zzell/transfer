@@ -21,8 +21,8 @@ type PostgresDSN struct {
 	Database string `json:"database"`
 }
 
-// NewDriver opens connection with database
-func NewDriver(dsn *PostgresDSN) (*sql.DB, error) {
+// Open opens connection with database
+func Open(dsn *PostgresDSN) (*sql.DB, error) {
 	db, err := sql.Open(driver, fmt.Sprintf(pssqlDsnFormat, dsn.User, dsn.Password, dsn.Server, dsn.Port, dsn.Database))
 	if err != nil {
 		return nil, err
