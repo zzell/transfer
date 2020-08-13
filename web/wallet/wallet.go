@@ -2,12 +2,12 @@ package wallet
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/zzell/transfer/db/repo"
-	"github.com/zzell/transfer/model"
 	"github.com/zzell/transfer/web/render"
 )
 
@@ -29,26 +29,18 @@ func (h Handler) GetWallet(w http.ResponseWriter, r *http.Request) {
 
 	walletIDInt, err := strconv.Atoi(walletID)
 	if err != nil {
-		render.JSON(w, http.StatusInternalServerError, model.ErrRsp{
-			Error:       "invalid request parameter",
-			Description: "failed to parse wallet ID",
-		})
+		render.Error(w, http.StatusInternalServerError, "invalid request parameter", "failed to parse wallet ID")
+		return
 	}
 
 	wallet, err := h.repo.GetWallet(walletIDInt)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			render.JSON(w, http.StatusNotFound, model.ErrRsp{
-				Error:       "wallet does not exist",
-				Description: err.Error(),
-			})
-			return
-		}
+	if errors.Is(err, sql.ErrNoRows) {
+		render.Error(w, http.StatusNotFound, "wallet does not exist", err.Error())
+		return
+	}
 
-		render.JSON(w, http.StatusInternalServerError, model.ErrRsp{
-			Error:       "failed to fetch wallet",
-			Description: err.Error(),
-		})
+	if err != nil {
+		render.Error(w, http.StatusInternalServerError, "failed to fetch wallet", err.Error())
 		return
 	}
 

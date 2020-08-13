@@ -43,22 +43,23 @@ func (h Handler) Transfer(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(payload)
 	if err != nil {
-		renderErr(w, http.StatusBadRequest, "invalid JSON body", err.Error())
+		render.Error(w, http.StatusBadRequest, "invalid JSON body", err.Error())
 		return
 	}
 
 	from, to, err := h.wallets(payload.From, payload.To)
+	if errors.Is(err, sql.ErrNoRows) {
+		render.Error(w, http.StatusBadRequest, "wallet does not exist", err.Error())
+		return
+	}
+
 	if err != nil {
-		if err == sql.ErrNoRows {
-			renderErr(w, http.StatusBadRequest, "wallet does not exist", err.Error())
-			return
-		}
-		renderErr(w, http.StatusInternalServerError, "failed to fetch wallet info", err.Error())
+		render.Error(w, http.StatusInternalServerError, "failed to fetch wallet info", err.Error())
 		return
 	}
 
 	if from.Score < payload.Amount {
-		renderErr(w, http.StatusBadRequest, "failed to process", "too small score in sender's wallet")
+		render.Error(w, http.StatusBadRequest, "failed to process", "too small score in sender's wallet")
 		return
 	}
 
@@ -68,19 +69,19 @@ func (h Handler) Transfer(w http.ResponseWriter, r *http.Request) {
 	if from.Currency.Symbol != to.Currency.Symbol {
 		addScore, err = h.converter.Convert(from.Currency, to.Currency, payload.Amount)
 		if err != nil {
-			renderErr(w, http.StatusInternalServerError, "failed to convert currency", err.Error())
+			render.Error(w, http.StatusInternalServerError, "failed to convert currency", err.Error())
 			return
 		}
 	}
 
 	err = h.repo.WalletsRepo.Transfer(payload.From, payload.To, payload.Amount, addScore)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			renderErr(w, http.StatusNotFound, "wallet does not exist", err.Error())
-			return
-		}
+	if errors.Is(err, sql.ErrNoRows) {
+		render.Error(w, http.StatusNotFound, "wallet does not exist", err.Error())
+		return
+	}
 
-		renderErr(w, http.StatusInternalServerError, "failed to process transaction", err.Error())
+	if err != nil {
+		render.Error(w, http.StatusInternalServerError, "failed to process transaction", err.Error())
 		return
 	}
 
@@ -119,11 +120,4 @@ func (h Handler) wallets(fromID, toID int) (from, to *model.Wallet, err error) {
 // get commission from gross value
 func commission(gross, percentage float64) float64 {
 	return (percentage / 100) * gross
-}
-
-func renderErr(w http.ResponseWriter, status int, err, desc string) {
-	render.JSON(w, status, model.ErrRsp{
-		Error:       err,
-		Description: desc,
-	})
 }
