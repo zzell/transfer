@@ -9,6 +9,8 @@ import (
 	"github.com/zzell/transfer/model"
 )
 
+//go:generate mockgen -package mock -destination=mock/converter_mock.go github.com/zzell/transfer/currency Converter
+
 // Converter converts value of one currency to another
 type Converter interface {
 	Convert(from, to model.Currency, amount float64) (float64, error)

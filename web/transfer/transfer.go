@@ -37,8 +37,8 @@ func NewHandler(config *cfg.Config, r repo.Repository, converter currency.Conver
 	}
 }
 
-// Handle handles transfer requests
-func (h Handler) Handle(w http.ResponseWriter, r *http.Request) {
+// Transfer handles transfer request
+func (h Handler) Transfer(w http.ResponseWriter, r *http.Request) {
 	var payload = new(model.TransferPayload)
 
 	err := json.NewDecoder(r.Body).Decode(payload)

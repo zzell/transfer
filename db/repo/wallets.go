@@ -7,6 +7,8 @@ import (
 	"github.com/zzell/transfer/model"
 )
 
+//go:generate mockgen -package mock -destination=mock/repo_mock.go github.com/zzell/transfer/db/repo WalletsRepo
+
 const (
 	subtractWalletScoreSQL = `UPDATE wallets SET score = score - $1 WHERE id = $2`
 	addWalletScoreSQL      = `UPDATE wallets SET score = score + $1 WHERE id = $2`
@@ -23,7 +25,7 @@ type (
 	WalletsRepo interface {
 		// instead of Transfer we could have "Add" and "Sub" methods but
 		// we need to use single transaction to be sure that everything executed in one batch
-		Transfer(sender, receiver int, gross, net float64) error
+		Transfer(sender, receiver int, sub, add float64) error
 		GetWallet(walletID int) (*model.Wallet, error)
 	}
 

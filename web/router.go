@@ -18,7 +18,7 @@ func NewRouter(repository repo.Repository, config *cfg.Config, converter currenc
 	transferHandler := transfer.NewHandler(config, repository, converter)
 	walletHandler := wallet.NewHandler(repository)
 
-	r.HandleFunc("/transfer", transferHandler.Handle).Methods(http.MethodPost)
+	r.HandleFunc("/transfer", transferHandler.Transfer).Methods(http.MethodPost)
 	r.HandleFunc("/wallet/{id}", walletHandler.GetWallet).Methods(http.MethodGet)
 
 	return r
